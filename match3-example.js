@@ -206,7 +206,7 @@ window.onload = function() {
                 // Swapping tiles animation
                 if (animationtime > animationtimetotal) {
                     // Swap the tiles
-                    swap(currentmove.column1, currentmove.row1, currentmove.column2, currentmove.row2);
+                    swap(currentmove.column2, currentmove.row2, currentmove.column1, currentmove.row1);
                     
                     // Check if the swap made a cluster
                     findClusters();
@@ -730,9 +730,8 @@ window.onload = function() {
     
     // Check if two tiles can be swapped
     function canSwap(x1, y1, x2, y2) {
-        // Check if the tile is a direct neighbor of the selected tile
-        if ((Math.abs(x1 - x2) == 1 && y1 == y2) ||
-            (Math.abs(y1 - y2) == 1 && x1 == x2)) {
+        // Same collumn or row
+        if ((x1 != x2 && y1 == y2) || (x1 == x2 && y1 != y2)) {
             return true;
         }
         
@@ -741,9 +740,40 @@ window.onload = function() {
     
     // Swap two tiles in the level
     function swap(x1, y1, x2, y2) {
-        var typeswap = level.tiles[x1][y1].type;
-        level.tiles[x1][y1].type = level.tiles[x2][y2].type;
-        level.tiles[x2][y2].type = typeswap;
+        var typeswap = level.tiles[x2][y2].type;
+
+        level.tiles[x2][y2].type = level.tiles[x1][y1].type;
+
+        if(
+            (((x1 >= x2) ? (x1 - x2) : (x2 - x1)) > 1) ||
+            (((y1 >= y2) ? (y1 - y2) : (y2 - y1)) > 1)
+        ){
+            var variables = {
+                axis: ((x1 != x2) ? 'x' : 'y'),
+                x1, x2, y1, y2,
+                initial: 0,
+                final: 0,
+                incremental: 0
+            };
+            variables.initial = variables[`${variables.axis}2`];
+            variables.final = variables[`${variables.axis}1`];
+            variables.incremental = ((variables.initial <= variables.final) ? 1 : -1);
+            var actual = variables.initial + variables.incremental;
+            while(actual != variables.final){
+                var typeaux;
+                if(variables.axis == 'x'){
+                    typeaux = level.tiles[actual][y1].type;
+                    level.tiles[actual][y1].type = typeswap;
+                }else{
+                    typeaux = level.tiles[x1][actual].type;
+                    level.tiles[x1][actual].type = typeswap;
+                }
+                typeswap = typeaux;
+                actual = actual + variables.incremental;
+            }
+        }
+
+        level.tiles[x1][y1].type = typeswap;
     }
     
     // Swap two tiles as a player action
@@ -762,23 +792,6 @@ window.onload = function() {
     
     // On mouse movement
     function onMouseMove(e) {
-        // Get the mouse position
-        var pos = getMousePos(canvas, e);
-        
-        // Check if we are dragging with a tile selected
-        if (drag && level.selectedtile.selected) {
-            // Get the tile under the mouse
-            mt = getMouseTile(pos);
-            if (mt.valid) {
-                // Valid tile
-                
-                // Check if the tiles can be swapped
-                if (canSwap(mt.x, mt.y, level.selectedtile.column, level.selectedtile.row)){
-                    // Swap the tiles
-                    mouseSwap(mt.x, mt.y, level.selectedtile.column, level.selectedtile.row);
-                }
-            }
-        }
     }
     
     // On mouse button click
@@ -845,6 +858,27 @@ window.onload = function() {
     }
     
     function onMouseUp(e) {
+        // Get the mouse position
+        var pos = getMousePos(canvas, e);
+
+        // Check if we are dragging with a tile selected
+        if (drag && level.selectedtile.selected) {
+            // Get the tile under the mouse
+            mt = getMouseTile(pos);
+            if (mt.valid) {
+                // Valid tile
+                
+                // Check if the tiles can be swapped
+                if (canSwap(mt.x, mt.y, level.selectedtile.column, level.selectedtile.row)){
+                    // Swap the tiles
+                    mouseSwap(mt.x, mt.y, level.selectedtile.column, level.selectedtile.row);
+                }else if((mt.x != level.selectedtile.column) && (mt.y != level.selectedtile.row)){
+                    // Deselect
+                    level.selectedtile.selected = false;
+                }
+            }
+        }
+
         // Reset dragging
         drag = false;
     }
